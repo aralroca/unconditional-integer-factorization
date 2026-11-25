@@ -1,15 +1,30 @@
 import init, { factorize } from "../wasm/pkg/factor_wasm.js";
 
-import type { FactorRequest, FactorResponse } from "../lib/factor-protocol";
+import type { FactorFailure, FactorRequest, FactorResponse } from "../lib/factor-protocol";
 
-const ready = init();
+const LOAD_FAILURE: FactorFailure = {
+  ok: false,
+  error: "The factoring engine could not be loaded. Check your connection and try again.",
+  restart: true,
+};
+const CRASH: FactorFailure = { ok: false, error: "The factoring engine failed on this number.", restart: true };
+
+const ready = init().then(
+  () => true,
+  () => false,
+);
 
 self.addEventListener("message", function answer(event: MessageEvent<FactorRequest>) {
-  ready
-    .then(() => run(event.data.input))
-    .catch(failure)
-    .then((response) => self.postMessage(response));
+  ready.then((loaded) => self.postMessage(loaded ? attempt(event.data.input) : LOAD_FAILURE));
 });
+
+function attempt(input: string): FactorResponse {
+  try {
+    return run(input);
+  } catch (error) {
+    return failure(error);
+  }
+}
 
 function run(input: string): FactorResponse {
   const started = performance.now();
@@ -22,6 +37,9 @@ function run(input: string): FactorResponse {
   return { ok: true, n, primes, exponents, unfactored, ms: performance.now() - started };
 }
 
-function failure(error: unknown): FactorResponse {
+/** Rust panics surface as WebAssembly traps; the instance may be inconsistent afterwards. */
+function failure(error: unknown): FactorFailure {
+  if (error instanceof WebAssembly.RuntimeError) return CRASH;
+
   return { ok: false, error: error instanceof Error ? error.message : String(error) };
 }

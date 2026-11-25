@@ -18,9 +18,13 @@ describe("summarize", () => {
   });
 
   it("mentions a composite part that could not be split", () => {
-    expect(summarize(success([], [], ["221"]))).toBe(
-      "0 distinct prime factors, plus a composite part too large to split here",
+    expect(summarize(success(["2"], [3], ["221"]))).toBe(
+      "1 distinct prime factor, plus a composite part that could not be split here",
     );
+  });
+
+  it("describes a number that could not be split at all", () => {
+    expect(summarize(success([], [], ["221"]))).toBe("composite, could not be split here");
   });
 });
 
@@ -28,6 +32,7 @@ describe("formatDuration", () => {
   it("uses milliseconds below one second and seconds above", () => {
     expect(formatDuration(0.2)).toBe("1 ms");
     expect(formatDuration(240.4)).toBe("240 ms");
+    expect(formatDuration(999.7)).toBe("1.00 s");
     expect(formatDuration(1534)).toBe("1.53 s");
   });
 });

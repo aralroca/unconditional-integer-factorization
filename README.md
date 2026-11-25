@@ -40,8 +40,8 @@ best practical methods available in Rust and explains where the new result fits.
    [yamaquasi](https://github.com/remyoudompheng/yamaquasi): Pollard rho, P−1, ECM and the
    self-initialising quadratic sieve. This finishes the factorization, although semiprimes above
    ~100 digits can take a very long time.
-3. A larger cofactor only gets a primality test; if it is composite it is reported as
-   "too large to split here". (General-purpose splitting at that size can run for hours, and
+3. A larger cofactor only gets a primality test; if it is composite it is reported as a part
+   that "could not be split here". (General-purpose splitting at that size can run for hours, and
    num-prime's splitter has no step limit.)
 
 Every reported prime passes a Baillie–PSW test (no counterexample is known).

@@ -61,6 +61,19 @@ test("explains invalid input", async ({ page }) => {
   await expect(page.getByRole("main").getByRole("alert")).toHaveText("Enter an integer greater than 1.");
 });
 
+test("reports an engine that failed to load and recovers on the next run", async ({ page }) => {
+  await page.route("**/*.wasm", (route) => route.abort());
+  await page.reload();
+  await factorize(page, "3233");
+
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(/could not be loaded/);
+
+  await page.unroute("**/*.wasm");
+  await page.getByRole("button", { name: "Factorize" }).click();
+
+  await expect(page.getByTestId("factorization")).toHaveText("3233 = 53 × 61");
+});
+
 test("cancels a long factorization", async ({ page }) => {
   await factorize(page, RSA_100);
   await expect(page.getByRole("status")).toContainText("Factoring");
