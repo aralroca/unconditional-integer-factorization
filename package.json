@@ -1,0 +1,29 @@
+{
+  "name": "unconditional-integer-factorization",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Factor integers in the browser with Rust compiled to WebAssembly, and read what Google's L_N[1/3, O(1)] factoring result does and does not change.",
+  "license": "MIT",
+  "packageManager": "pnpm@12.21.0",
+  "scripts": {
+    "build:wasm": "sh scripts/build-wasm.sh",
+    "dev": "next dev",
+    "build": "next build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "next": "16.4.6",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1",
+    "@types/node": "26.6.10",
+    "@types/react": "19.3.3",
+    "@types/react-dom": "19.3.0",
+    "typescript": "7.0.2",
+    "vitest": "5.1.2"
+  }
+}
