@@ -3,6 +3,8 @@ import { expect, test, type Page } from "@playwright/test";
 const M1279 = (2n ** 1279n - 1n).toString();
 const RSA_100 =
   "1522605027922533360535618378132637429718068114961380688657908494580122963258952897654000350692006139";
+const TWIN_BILLIONS = "1000000016000000063"; // 1000000007 × 1000000009
+const SEMIPRIME_39 = "300000000000000438880000000000084056037";
 
 function collectConsoleErrors(page: Page) {
   const errors: string[] = [];
@@ -31,6 +33,10 @@ async function isolateOnce(page: Page) {
   }
 
   return false;
+}
+
+async function chooseMethod(page: Page, label: string) {
+  await page.getByRole("combobox", { name: /Method/ }).selectOption({ label });
 }
 
 async function factorize(page: Page, value: string) {
@@ -97,8 +103,8 @@ test("shows live progress of the race between ECM and the quadratic sieve, then 
   expect(errors).toEqual([]);
 });
 
-test("explains which algorithm runs when", async ({ page }) => {
-  const table = page.getByRole("table");
+test("explains what Auto runs and when", async ({ page }) => {
+  const table = page.getByRole("region", { name: "What Auto runs, and when" }).getByRole("table");
 
   await expect(table.getByRole("rowheader")).toHaveText([
     "Trial division",
@@ -122,4 +128,53 @@ test("reports an engine that failed to load and recovers on the next run", async
   await page.getByRole("button", { name: "Factorize" }).click();
 
   await expect(page.getByTestId("factorization")).toHaveText("3233 = 53 × 61");
+});
+
+test("runs a single method on its own: Pollard rho", async ({ page }) => {
+  await chooseMethod(page, "Pollard rho");
+  await factorize(page, TWIN_BILLIONS);
+
+  await expect(page.getByTestId("factorization")).toHaveText(`${TWIN_BILLIONS} = 1000000007 × 1000000009`);
+  await expect(page.getByTestId("methods")).toHaveText("Methods used: Pollard rho → Baillie–PSW primality test");
+});
+
+test("Google's algorithm runs its first step, trial division, at browser sizes", async ({ page }) => {
+  await chooseMethod(page, "Google's L_N[1/3, O(1)] algorithm (2026 paper)");
+  await factorize(page, "1000002936999811");
+
+  await expect(page.getByTestId("factorization")).toHaveText("1000002936999811 = 1000003 × 999999937");
+  await expect(page.getByTestId("methods")).toHaveText(
+    "Methods used: Google's algorithm (trial division below 2^10000) → Baillie–PSW primality test",
+  );
+});
+
+test("trial division shows how far it is from √N, then cancels", async ({ page }) => {
+  await chooseMethod(page, "Trial division");
+  await factorize(page, SEMIPRIME_39);
+
+  await expect(page.getByRole("list", { name: "Running now" })).toContainText("it may need up to √N ≈ 10^19", {
+    timeout: 30_000,
+  });
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("button", { name: "Factorize" })).toBeVisible();
+});
+
+test("compares the estimated cost of every method, highlighting the chosen one", async ({ page }) => {
+  const estimates = page.getByRole("region", { name: "Estimated cost for this number" });
+
+  await page.getByLabel("Integer to factorize").fill(RSA_100);
+  await chooseMethod(page, "Google's L_N[1/3, O(1)] algorithm (2026 paper)");
+
+  await expect(estimates.getByRole("rowheader")).toHaveText([
+    "Trial division",
+    "Pollard rho",
+    "Pollard P−1",
+    "ECM (elliptic curves)",
+    "Quadratic sieve (SIQS)",
+    "Number Field Sieve",
+    "Google's algorithm",
+  ]);
+  await expect(estimates.getByRole("row", { name: /Quadratic sieve/ })).toContainText("≈ 1015");
+  await expect(estimates.locator('tr[aria-current="true"]')).toContainText("≈ 10861");
+  await expect(estimates.locator('tr[aria-current="true"]')).toContainText("here it is trial division");
 });
