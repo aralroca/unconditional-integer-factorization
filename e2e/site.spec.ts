@@ -18,9 +18,19 @@ function collectConsoleErrors(page: Page) {
 /** First visit installs the COOP/COEP service worker; after a reload the page is isolated. */
 async function openIsolated(page: Page) {
   await page.goto("./");
-  await page.evaluate(() => navigator.serviceWorker.ready);
-  await page.reload();
-  await expect.poll(() => page.evaluate(() => window.crossOriginIsolated)).toBe(true);
+  await expect.poll(() => isolateOnce(page), { timeout: 15_000 }).toBe(true);
+}
+
+async function isolateOnce(page: Page) {
+  try {
+    if (await page.evaluate(() => window.crossOriginIsolated)) return true;
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.reload();
+  } catch {
+    // coi-serviceworker reloaded the page itself in the meantime.
+  }
+
+  return false;
 }
 
 async function factorize(page: Page, value: string) {

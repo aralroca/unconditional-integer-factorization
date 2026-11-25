@@ -61,7 +61,7 @@ digits but a far larger program. The paper's algorithm is slower at every practi
   SIMD. [wasm-bindgen-rayon](https://github.com/RReverser/wasm-bindgen-rayon) runs rayon's thread
   pool as Web Workers, one per logical core.
 - [`public/factor.worker.js`](public/factor.worker.js) loads the engine, starts the job and polls
-  its progress every 200 ms. **Cancel** terminates it, and its thread pool with it.
+  its progress every 50 ms. **Cancel** terminates it, and its thread pool with it.
 - Shared memory needs cross-origin isolation, and GitHub Pages cannot send COOP/COEP headers. The
   vendored [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker) adds them, which
   reloads the page once on the first visit.

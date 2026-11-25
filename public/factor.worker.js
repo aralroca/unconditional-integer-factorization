@@ -3,7 +3,7 @@
 // Served as a static module next to public/engine (built by scripts/build-wasm.sh).
 import init, { activity, initThreadPool, methods, start, takeResult } from "./engine/factor_wasm.js";
 
-const POLL_MS = 200;
+const POLL_MS = 50;
 const NOT_ISOLATED =
   "This browser did not enable cross-origin isolation, which multithreaded WebAssembly needs. Reload the page to try again.";
 const LOAD_FAILURE = "The factoring engine could not be loaded. Check your connection and try again.";
