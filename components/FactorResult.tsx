@@ -23,8 +23,9 @@ function Running({ activity, ms }: { activity: string[]; ms: number }) {
     <div className="result" role="status">
       <p className="result-note">Factoring for {formatDuration(ms)}. Press Cancel to stop.</p>
       <ul className="activity" aria-label="Running now">
-        {activity.map((line) => (
-          <li key={line.split(":")[0]}>{line}</li>
+        {/* One line per lane (main, then the ECM race), always in that order. */}
+        {activity.map((line, lane) => (
+          <li key={lane}>{line}</li>
         ))}
       </ul>
     </div>

@@ -74,6 +74,7 @@ test("explains invalid input", async ({ page }) => {
 
 test("shows live progress of the race between ECM and the quadratic sieve, then cancels", async ({ page }) => {
   const running = page.getByRole("list", { name: "Running now" });
+  const errors = collectConsoleErrors(page);
 
   await factorize(page, RSA_100);
 
@@ -83,6 +84,7 @@ test("shows live progress of the race between ECM and the quadratic sieve, then 
 
   await expect(page.getByRole("button", { name: "Factorize" })).toBeVisible();
   await expect(page.getByRole("main").getByRole("status")).toHaveCount(0);
+  expect(errors).toEqual([]);
 });
 
 test("explains which algorithm runs when", async ({ page }) => {
