@@ -1,8 +1,9 @@
 //! One method on its own, so the page can compare methods on the same number.
 //!
-//! These runners never give up by themselves: a method that is too slow for the
-//! number just keeps reporting progress until the page cancels it (which terminates
-//! the worker). That is the point of the comparison.
+//! Trial division and Pollard rho never give up: when they are too slow for the number
+//! they keep reporting progress until the page cancels them (which terminates the
+//! worker). That is the point of the comparison. P−1, ECM and the quadratic sieve stop
+//! when yamaquasi gives up, and the parts they could not split are reported as such.
 
 use std::str::FromStr;
 
@@ -46,6 +47,11 @@ impl FromStr for Method {
 
 const TRIAL_DIVISION: &str = "Trial division";
 const GOOGLE: &str = "Google's algorithm (trial division below 2^10000)";
+const GOOGLE_NOT_IMPLEMENTED: &str = "Google's algorithm: its steps above 2^10000 are not implemented here";
+const NOT_RUN_ABOVE_512_BITS: &str = "Not run: this method works up to 512 bits";
+
+/// Below 2^10000 (that is, up to 10 000 bits) the paper's algorithm is trial division.
+const GOOGLE_TRIAL_DIVISION_BITS: u64 = 10_000;
 
 /// Report trial-division progress every this many candidate divisors.
 const REPORT_EVERY: u64 = 1 << 22;
@@ -58,12 +64,21 @@ pub fn run(n: BigUint, method: Method) -> Vec<BigUint> {
     match method {
         Method::Auto => unreachable!("Auto is the engine's own strategy"),
         Method::TrialDivision => trial_division(n, TRIAL_DIVISION),
-        Method::Google => trial_division(n, GOOGLE),
+        Method::Google => google(n),
         Method::PollardRho => rho(n),
         Method::PollardPm1 => yamaquasi_only(n, Algo::Pm1, "Pollard P−1"),
         Method::Ecm => yamaquasi_only(n, Algo::Ecm, "ECM (elliptic curves)"),
         Method::Siqs => yamaquasi_only(n, Algo::Siqs, "Quadratic sieve (SIQS)"),
     }
+}
+
+/// The paper's algorithm: trial division below 2^10000; its other steps are not implemented.
+fn google(n: BigUint) -> Vec<BigUint> {
+    if n.bits() > GOOGLE_TRIAL_DIVISION_BITS {
+        progress::report(Lane::Main, GOOGLE_NOT_IMPLEMENTED, None);
+        return vec![n];
+    }
+    trial_division(n, GOOGLE)
 }
 
 /// Divides by 2, 3, 5, 7, 9… up to √n. Exact, and hopeless for large factors.
@@ -94,7 +109,7 @@ fn trial_division(mut n: BigUint, label: &'static str) -> Vec<BigUint> {
 fn trial_detail(d: u64, n: &BigUint) -> String {
     let needed = n.sqrt();
 
-    format!("tried every divisor up to {}; it may need up to √N ≈ {}", sci(d), magnitude(&needed))
+    format!("tried every divisor below {}; it may need up to √N ≈ {}", sci(d), magnitude(&needed))
 }
 
 /// `n mod d` from the 64-bit digits of `n` (least significant first).
@@ -139,10 +154,11 @@ fn split_with_rho(n: BigUint, steps: &mut u64) -> Vec<BigUint> {
 fn yamaquasi_only(n: BigUint, algo: Algo, label: &'static str) -> Vec<BigUint> {
     let mut prefs = Preferences::default();
 
-    progress::report(Lane::Main, label, None);
     if n.bits() > YAMAQUASI_MAX_BITS {
+        progress::report(Lane::Main, NOT_RUN_ABOVE_512_BITS, None);
         return vec![n];
     }
+    progress::report(Lane::Main, label, None);
     prefs.verbosity = Verbosity::Silent;
     prefs.threads = Some(rayon::current_num_threads());
     prefs.progress = Some(Box::new(progress::from_yamaquasi));
@@ -157,12 +173,26 @@ fn sci(x: u64) -> String {
     if x < 10_000 {
         return x.to_string();
     }
-    let exponent = (x as f64).log10().floor() as i32;
+    // Rust's `e` formatting rounds the mantissa first, so 99 999 is "1.0e5", not "10.0e4".
+    let formatted = format!("{:.1e}", x as f64);
+    let (mantissa, exponent) = formatted.split_once('e').unwrap_or((&formatted, "0"));
 
-    format!("{:.1} × 10^{exponent}", x as f64 / 10f64.powi(exponent))
+    format!("{mantissa} × 10^{exponent}")
 }
 
 /// Order of magnitude of a possibly huge number, as "10^19".
 fn magnitude(n: &BigUint) -> String {
     format!("10^{}", n.to_string().len().saturating_sub(1))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::sci;
+
+    #[test]
+    fn writes_large_counts_in_scientific_notation() {
+        assert_eq!(sci(1_234), "1234");
+        assert_eq!(sci(4_194_305), "4.2 × 10^6");
+        assert_eq!(sci(99_999), "1.0 × 10^5");
+    }
 }

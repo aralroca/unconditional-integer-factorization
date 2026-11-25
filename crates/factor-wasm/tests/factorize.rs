@@ -10,7 +10,7 @@ fn complete(n: &str, powers: &[(&str, u32)]) -> Factorization {
         n: n.to_string(),
         primes: powers.iter().map(|(p, _)| p.to_string()).collect(),
         exponents: powers.iter().map(|(_, e)| *e).collect(),
-        unfactored: vec![],
+        ..Factorization::default()
     }
 }
 
@@ -113,7 +113,7 @@ fn reports_a_large_cofactor_it_cannot_split() {
 
     assert_eq!(
         factor_decimal(&n),
-        Ok(Factorization { n: n.clone(), unfactored: vec![n], ..Factorization::default() })
+        Ok(Factorization { n: n.clone(), unfactored: vec![n], unfactored_exponents: vec![1], ..Factorization::default() })
     );
 }
 

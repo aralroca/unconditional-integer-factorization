@@ -46,8 +46,8 @@ const ECM_BATCH: usize = 8;
 
 pub type Powers = BTreeMap<BigUint, u32>;
 
-/// Factors `n` with `method`: prime powers plus the composite parts left unsplit.
-pub fn factor(n: BigUint, method: Method) -> (Powers, Vec<BigUint>) {
+/// Factors `n` with `method`: prime powers, and powers of the composite parts left unsplit.
+pub fn factor(n: BigUint, method: Method) -> (Powers, Powers) {
     match method {
         Method::Auto => split(n),
         _ => tally(Powers::new(), single::run(n, method)),
@@ -55,7 +55,7 @@ pub fn factor(n: BigUint, method: Method) -> (Powers, Vec<BigUint>) {
 }
 
 /// Auto: splits `n` into prime powers plus the composite parts it could not split.
-fn split(n: BigUint) -> (Powers, Vec<BigUint>) {
+fn split(n: BigUint) -> (Powers, Powers) {
     progress::report(Lane::Main, "Trial division", Some("primes below 16 384".into()));
     let (small, rest) = trial_division(primes(TRIAL_DIVISION_LIMIT).into_iter(), n, None);
     let cofactor = rest.unwrap_or_else(|unfinished| unfinished);
@@ -71,17 +71,18 @@ fn split(n: BigUint) -> (Powers, Vec<BigUint>) {
     tally(powers, large)
 }
 
-/// Adds the prime `parts` to `powers` (each checked with Baillie–PSW) and returns the
-/// composite ones separately.
-fn tally(mut powers: Powers, parts: Vec<BigUint>) -> (Powers, Vec<BigUint>) {
-    let mut unfactored = Vec::new();
+/// Adds the prime `parts` to `powers` (each checked with Baillie–PSW) and counts the
+/// composite ones separately: a method can leave the same composite several times, for
+/// example the base of a perfect power it cannot split.
+fn tally(mut powers: Powers, parts: Vec<BigUint>) -> (Powers, Powers) {
+    let mut unfactored = Powers::new();
 
     progress::report(Lane::Main, "Baillie–PSW primality test", None);
     for part in parts.into_iter().filter(|p| p > &BigUint::from(1u8)) {
         if is_probable_prime(&part) {
             *powers.entry(part).or_default() += 1;
         } else {
-            unfactored.push(part);
+            *unfactored.entry(part).or_default() += 1;
         }
     }
     progress::finish(Lane::Main);
