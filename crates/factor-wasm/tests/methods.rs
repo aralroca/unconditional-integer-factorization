@@ -14,8 +14,11 @@ fn records_the_methods_used_in_order() {
     let used = methods();
     let position = |method: &str| used.iter().position(|m| m == method);
 
+    let p_minus_1 = position("Pollard P−1").expect("P−1 ran");
+    let sieve = position("Quadratic sieve (SIQS)").expect("the sieve ran");
+
     assert_eq!(position("Trial division"), Some(0));
-    assert!(position("Pollard rho") < position("Quadratic sieve (SIQS)"), "{used:?}");
-    assert!(position("Quadratic sieve (SIQS)").is_some(), "{used:?}");
+    assert!(p_minus_1 < sieve, "{used:?}");
+    assert!(!used.iter().any(|m| m == "Pollard rho"), "{used:?}");
     assert_eq!(used.last().map(String::as_str), Some("Baillie–PSW primality test"));
 }

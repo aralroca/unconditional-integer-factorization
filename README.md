@@ -37,13 +37,12 @@ best practical methods available in Rust and explains where the new result fits.
 | Step | Method | When it runs | Cost |
 | --- | --- | --- | --- |
 | 1 | Trial division ([num-prime](https://github.com/uutils/num-prime)) | always: every prime below 2<sup>14</sup>, any input size | ~1 900 divisions |
-| 2 | Pollard rho | on what is left, up to 512 bits | ~√p for a factor p |
-| 3 | Pollard P−1 | same range; finds p when p − 1 is smooth | depends on p − 1 |
-| 4 | ECM | a short pretest sized to N, then, from 200 bits, racing step 5 on one thread | L<sub>p</sub>[1/2, √2] |
-| 5 | Self-initialising quadratic sieve (SIQS) | what ECM did not split, up to 512 bits (~154 digits), on every thread | L<sub>N</sub>[1/2, 1] |
-| 6 | Baillie–PSW | every reported prime, and any cofactor above 512 bits | polynomial |
+| 2 | Pollard P−1 | on what is left, up to 512 bits; finds p when p − 1 is smooth | depends on p − 1 |
+| 3 | ECM | a short pretest sized to N, then, from 200 bits, racing step 4 on one thread | L<sub>p</sub>[1/2, √2] |
+| 4 | Self-initialising quadratic sieve (SIQS) | what ECM did not split, up to 512 bits (~154 digits), on every thread | L<sub>N</sub>[1/2, 1] |
+| 5 | Baillie–PSW | every reported prime, and any cofactor above 512 bits | polynomial |
 
-Steps 2–5 are [yamaquasi](https://github.com/remyoudompheng/yamaquasi)'s automatic strategy. For a
+Steps 2–4 are [yamaquasi](https://github.com/remyoudompheng/yamaquasi)'s automatic strategy. For a
 cofactor of 200 bits or more, an extra ECM search with GMP-ECM's recommended bounds races it:
 whichever finds a factor first stops the other through yamaquasi's `should_abort`. A composite
 cofactor above 512 bits is reported as a part that "could not be split here": general-purpose

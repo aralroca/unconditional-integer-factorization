@@ -58,7 +58,7 @@ test("factors a sample on the thread pool and lists the methods used", async ({ 
   await expect(page.getByTestId("factorization")).toHaveText("147573952589676412927 = 193707721 × 761838257287");
   await expect(page.getByText(/^2 distinct prime factors · .* on \d+ threads$/)).toBeVisible();
   await expect(page.getByTestId("methods")).toHaveText(
-    /^Methods used: Trial division → Pollard rho → .*Baillie–PSW primality test$/,
+    /^Methods used: Trial division → .*Baillie–PSW primality test$/,
   );
   expect(errors).toEqual([]);
 });
@@ -102,7 +102,6 @@ test("explains which algorithm runs when", async ({ page }) => {
 
   await expect(table.getByRole("rowheader")).toHaveText([
     "Trial division",
-    "Pollard rho",
     "Pollard P−1",
     "ECM (elliptic curves)",
     "Quadratic sieve (SIQS)",

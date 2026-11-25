@@ -4,6 +4,7 @@
 //! so the state lives behind a global mutex.
 
 use std::collections::BTreeMap;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 
 /// A line of work that can run at the same time as another one.
@@ -22,12 +23,20 @@ struct State {
 
 static STATE: Mutex<State> = Mutex::new(State { activity: BTreeMap::new(), methods: Vec::new() });
 
+const SIQS: &str = "Quadratic sieve (SIQS)";
+
+// Sieve progress arrives after every polynomial from every thread: kept lock-free and
+// only turned into text when the page asks for it.
+static RELATIONS: AtomicUsize = AtomicUsize::new(0);
+static TARGET: AtomicUsize = AtomicUsize::new(0);
+
 fn with_state<R>(f: impl FnOnce(&mut State) -> R) -> R {
     f(&mut STATE.lock().unwrap_or_else(|poisoned| poisoned.into_inner()))
 }
 
 /// Starts a new run.
 pub fn reset() {
+    TARGET.store(0, Ordering::Relaxed);
     with_state(|state| {
         state.activity.clear();
         state.methods.clear();
@@ -51,7 +60,18 @@ pub fn finish(lane: Lane) {
 
 /// One line per lane that is currently running.
 pub fn activity() -> Vec<String> {
-    with_state(|state| state.activity.values().cloned().collect())
+    with_state(|state| state.activity.values().map(|line| with_sieve_progress(line)).collect())
+}
+
+fn with_sieve_progress(line: &str) -> String {
+    let relations = RELATIONS.load(Ordering::Relaxed);
+    let target = TARGET.load(Ordering::Relaxed);
+
+    if line != SIQS || target == 0 {
+        return line.to_string();
+    }
+    let percent = (100 * relations / target).min(99);
+    format!("{SIQS}: {percent}% of the relations ({relations} of {target})")
 }
 
 /// Methods used so far, in the order they started.
@@ -64,15 +84,17 @@ pub fn from_yamaquasi(event: yamaquasi::Progress) {
     match event {
         yamaquasi::Progress::Algorithm("Pollard P-1") => report(Lane::Main, "Pollard P−1", None),
         yamaquasi::Progress::Algorithm("ECM") => report(Lane::Main, "ECM (elliptic curves)", None),
-        yamaquasi::Progress::Algorithm("SIQS") => report(Lane::Main, "Quadratic sieve (SIQS)", None),
+        yamaquasi::Progress::Algorithm("SIQS") => {
+            TARGET.store(0, Ordering::Relaxed);
+            report(Lane::Main, SIQS, None)
+        }
         yamaquasi::Progress::Algorithm("linear algebra") => {
             report(Lane::Main, "Linear algebra (SIQS)", Some("combining relations into a square".into()))
         }
         yamaquasi::Progress::Algorithm(_) => {}
         yamaquasi::Progress::Sieve { relations, target } => {
-            let percent = (100 * relations / target.max(1)).min(99);
-            let detail = format!("{percent}% of the relations ({relations} of {target})");
-            report(Lane::Main, "Quadratic sieve (SIQS)", Some(detail));
+            RELATIONS.store(relations, Ordering::Relaxed);
+            TARGET.store(target, Ordering::Relaxed);
         }
     }
 }

@@ -8,7 +8,7 @@ mod engine;
 mod progress;
 
 use std::str::FromStr;
-use std::sync::Mutex;
+use std::sync::{Mutex, Once};
 
 use num_bigint::BigUint;
 use wasm_bindgen::prelude::*;
@@ -32,6 +32,10 @@ pub struct Factorization {
 
 static RESULT: Mutex<Option<Factorization>> = Mutex::new(None);
 
+/// Message of a panic on a worker thread. WebAssembly is built with panic=abort, so the
+/// thread dies; the hook records why so that the page does not wait forever.
+static FAILURE: Mutex<Option<String>> = Mutex::new(None);
+
 /// Factors a decimal integer greater than 1 (spaces, `_` and `,` are ignored).
 pub fn factor_decimal(input: &str) -> Result<Factorization, String> {
     let n = parse(input)?;
@@ -45,8 +49,10 @@ pub fn factor_decimal(input: &str) -> Result<Factorization, String> {
 pub fn start(input: &str) -> Result<(), JsError> {
     let n = parse(input).map_err(|message| JsError::new(&message))?;
 
+    record_panics();
     progress::reset();
     *RESULT.lock().unwrap() = None;
+    *FAILURE.lock().unwrap() = None;
     rayon::spawn(move || {
         let result = factor(n);
         *RESULT.lock().unwrap() = Some(result);
@@ -64,6 +70,24 @@ pub fn activity() -> Vec<String> {
 #[wasm_bindgen]
 pub fn methods() -> Vec<String> {
     progress::methods()
+}
+
+/// Why a worker thread panicked, once; the run will not finish.
+#[wasm_bindgen(js_name = takeFailure)]
+pub fn take_failure() -> Option<String> {
+    FAILURE.lock().unwrap().take()
+}
+
+fn record_panics() {
+    static HOOK: Once = Once::new();
+
+    HOOK.call_once(|| {
+        std::panic::set_hook(Box::new(|info| {
+            if let Ok(mut failure) = FAILURE.try_lock() {
+                *failure = Some(info.to_string());
+            }
+        }))
+    });
 }
 
 /// The finished factorization, once; `None` while still running.

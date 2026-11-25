@@ -12,13 +12,8 @@ const STEPS: Step[] = [
     cost: "about 1 900 divisions",
   },
   {
-    method: "Pollard rho",
-    when: "On what is left, up to 512 bits: finds small factors quickly.",
-    cost: "about √p steps for a factor p",
-  },
-  {
     method: "Pollard P−1",
-    when: "Same range: finds a factor p when p − 1 has only small prime factors.",
+    when: "On what is left, up to 512 bits: finds a factor p when p − 1 has only small prime factors.",
     cost: "depends on p − 1, not on N",
   },
   {

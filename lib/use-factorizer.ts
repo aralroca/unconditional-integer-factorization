@@ -28,13 +28,20 @@ export function useFactorizer() {
   function spawn() {
     const worker = new Worker(`${BASE_PATH}/factor.worker.js`, { type: "module" });
 
-    worker.onmessage = (event: MessageEvent<WorkerMessage>) => receive(event.data);
-    worker.onerror = () => {
-      discard();
-      setState((current) => (current.status === "running" ? { status: "done", response: START_FAILURE } : current));
-    };
+    // A cancelled worker may still deliver queued messages: only listen to the current one.
+    worker.onmessage = (event: MessageEvent<WorkerMessage>) => whenCurrent(worker, () => receive(event.data));
+    worker.onerror = () => whenCurrent(worker, failToStart);
 
     return worker;
+  }
+
+  function whenCurrent(worker: Worker, handle: () => void) {
+    if (workerRef.current === worker) handle();
+  }
+
+  function failToStart() {
+    discard();
+    setState((current) => (current.status === "running" ? { status: "done", response: START_FAILURE } : current));
   }
 
   function discard() {

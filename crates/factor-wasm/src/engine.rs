@@ -2,7 +2,7 @@
 //!
 //! 1. Trial division by every prime below 2^14 (num-prime, any size).
 //! 2. A cofactor above 512 bits only gets a Baillie–PSW primality test.
-//! 3. Otherwise yamaquasi's automatic strategy runs (Pollard rho, P−1, ECM, then the
+//! 3. Otherwise yamaquasi's automatic strategy runs (P−1, ECM, then the
 //!    self-initialising quadratic sieve) on every thread. From 200 bits on, an extra
 //!    ECM search races it on one thread: whichever finds a factor first stops the other.
 
@@ -74,13 +74,20 @@ pub fn split(n: BigUint) -> (Powers, Vec<BigUint>) {
 
 /// Fully factors `n` (at most 512 bits); returns the factors, or `n` if it gave up.
 fn race(n: BigUint) -> Vec<BigUint> {
-    if n.bits() < RACE_MIN_BITS {
+    if n.bits() < RACE_MIN_BITS || rayon::current_num_threads() < 2 {
         return automatic(&n, Arc::new(AtomicBool::new(false))).unwrap_or_else(|| vec![n]);
     }
     let stop = Arc::new(AtomicBool::new(false));
-    let (sieved, hunted) = rayon::join(
-        || automatic(&n, stop.clone()).inspect(|_| stop.store(true, Ordering::Relaxed)),
+    // ECM runs on this thread while another worker steals the sieve. The other way round,
+    // this thread could pick the long ECM job up while it waits inside the sieve.
+    // The sieve ends the race whenever it returns; ECM only when it found a factor.
+    let (hunted, sieved) = rayon::join(
         || ecm_search(&n, stop.clone()).inspect(|_| stop.store(true, Ordering::Relaxed)),
+        || {
+            let sieved = automatic(&n, stop.clone());
+            stop.store(true, Ordering::Relaxed);
+            sieved
+        },
     );
     progress::finish(Lane::Race);
 
@@ -101,7 +108,6 @@ fn automatic(n: &BigUint, stop: Arc<AtomicBool>) -> Option<Vec<BigUint>> {
     prefs.threads = Some(rayon::current_num_threads());
     prefs.should_abort = Some(Box::new(move || stop.load(Ordering::Relaxed)));
     prefs.progress = Some(Box::new(progress::from_yamaquasi));
-    progress::report(Lane::Main, "Pollard rho", None);
 
     let found = yamaquasi::factor(to_uint(n), Algo::Auto, &prefs).ok()?;
     let product: BigUint = found.iter().map(to_biguint).product();
