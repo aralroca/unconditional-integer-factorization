@@ -1,30 +1,50 @@
-/** L_N[1/3, c] in native MathML, written the way the paper writes it. */
-export function LFormula({ constant }: { constant: "O(1)" | "105" }) {
+type LFormulaProps = {
+  /** The number whose size drives the cost: N, or the factor p for ECM. */
+  base?: "N" | "p";
+  alpha: "1/2" | "1/3";
+  constant: string;
+};
+
+/** L_base[alpha, constant] in native MathML, written the way the literature writes it. */
+export function LFormula({ base = "N", alpha, constant }: LFormulaProps) {
+  const [numerator, denominator] = alpha.split("/");
+
   return (
-    <math display="inline" className="formula" aria-label={`L sub N of 1/3, ${constant}`}>
+    <math display="inline" className="formula" aria-label={`L sub ${base} of ${alpha}, ${constant}`}>
       <msub>
         <mi>L</mi>
-        <mi>N</mi>
+        <mi>{base}</mi>
       </msub>
       <mo stretchy="false">[</mo>
-      <mn>1</mn>
+      <mn>{numerator}</mn>
       <mo lspace="0" rspace="0">
         /
       </mo>
-      <mn>3</mn>
+      <mn>{denominator}</mn>
       <mo>,</mo>
-      {constant === "105" ? (
-        <mn>105</mn>
-      ) : (
-        <>
-          <mi mathvariant="normal">O</mi>
-          <mo stretchy="false">(</mo>
-          <mn>1</mn>
-          <mo stretchy="false">)</mo>
-        </>
-      )}
+      <Constant value={constant} />
       <mo stretchy="false">]</mo>
     </math>
+  );
+}
+
+function Constant({ value }: { value: string }) {
+  if (value === "√2") {
+    return (
+      <msqrt>
+        <mn>2</mn>
+      </msqrt>
+    );
+  }
+  if (value !== "O(1)") return <mn>{value}</mn>;
+
+  return (
+    <>
+      <mi mathvariant="normal">O</mi>
+      <mo stretchy="false">(</mo>
+      <mn>1</mn>
+      <mo stretchy="false">)</mo>
+    </>
   );
 }
 

@@ -64,6 +64,29 @@ fn splits_semiprimes() {
 }
 
 #[test]
+fn races_ecm_against_the_sieve_from_200_bits() {
+    let medium_factor = "30000000000000000000001470000000000000000000000059000000000000000000002891";
+    let balanced = "900000000000000000000000000004580000000000000000000000000005313";
+    let below_race = "70000000000000000000000000226600000000000000000000000010527";
+
+    assert_eq!(
+        factor_decimal(medium_factor),
+        Ok(complete(
+            medium_factor,
+            &[("1000000000000000000000049", 1), ("30000000000000000000000000000000000000000000000059", 1)]
+        ))
+    );
+    assert_eq!(
+        factor_decimal(balanced),
+        Ok(complete(balanced, &[("10000000000000000000000000000033", 1), ("90000000000000000000000000000161", 1)]))
+    );
+    assert_eq!(
+        factor_decimal(below_race),
+        Ok(complete(below_race, &[("100000000000000000000000000319", 1), ("700000000000000000000000000033", 1)]))
+    );
+}
+
+#[test]
 fn handles_numbers_above_512_bits() {
     let m607 = mersenne(607);
     let n = BigUint::from(243u32 * 9973u32) * &m607;

@@ -15,13 +15,31 @@ function collectConsoleErrors(page: Page) {
   return errors;
 }
 
+/** First visit installs the COOP/COEP service worker; after a reload the page is isolated. */
+async function openIsolated(page: Page) {
+  await page.goto("./");
+  await expect.poll(() => isolateOnce(page), { timeout: 15_000 }).toBe(true);
+}
+
+async function isolateOnce(page: Page) {
+  try {
+    if (await page.evaluate(() => window.crossOriginIsolated)) return true;
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.reload();
+  } catch {
+    // coi-serviceworker reloaded the page itself in the meantime.
+  }
+
+  return false;
+}
+
 async function factorize(page: Page, value: string) {
   await page.getByLabel("Integer to factorize").fill(value);
   await page.getByRole("button", { name: "Factorize" }).click();
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("./");
+  await openIsolated(page);
 });
 
 test("shows the paper's bound as MathML", async ({ page }) => {
@@ -32,13 +50,16 @@ test("shows the paper's bound as MathML", async ({ page }) => {
   await expect(formula).toHaveText("LN[1/3,O(1)]");
 });
 
-test("factors a sample with the WebAssembly engine", async ({ page }) => {
+test("factors a sample on the thread pool and lists the methods used", async ({ page }) => {
   const errors = collectConsoleErrors(page);
 
   await page.getByRole("button", { name: "2^67 − 1" }).click();
 
   await expect(page.getByTestId("factorization")).toHaveText("147573952589676412927 = 193707721 × 761838257287");
-  await expect(page.getByText(/^2 distinct prime factors · /)).toBeVisible();
+  await expect(page.getByText(/^2 distinct prime factors · .* on \d+ threads$/)).toBeVisible();
+  await expect(page.getByTestId("methods")).toHaveText(
+    /^Methods used: Trial division → .*Baillie–PSW primality test$/,
+  );
   expect(errors).toEqual([]);
 });
 
@@ -61,24 +82,44 @@ test("explains invalid input", async ({ page }) => {
   await expect(page.getByRole("main").getByRole("alert")).toHaveText("Enter an integer greater than 1.");
 });
 
-test("reports an engine that failed to load and recovers on the next run", async ({ page }) => {
-  await page.route("**/*.wasm", (route) => route.abort());
+test("shows live progress of the race between ECM and the quadratic sieve, then cancels", async ({ page }) => {
+  const running = page.getByRole("list", { name: "Running now" });
+  const errors = collectConsoleErrors(page);
+
+  await factorize(page, RSA_100);
+
+  await expect(running).toContainText("ECM (elliptic curves): racing the sieve for factors up to");
+  await expect(running).toContainText(/Quadratic sieve \(SIQS\): \d+% of the relations/, { timeout: 45_000 });
+  await page.getByRole("button", { name: "Cancel" }).click();
+
+  await expect(page.getByRole("button", { name: "Factorize" })).toBeVisible();
+  await expect(page.getByRole("main").getByRole("status")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("explains which algorithm runs when", async ({ page }) => {
+  const table = page.getByRole("table");
+
+  await expect(table.getByRole("rowheader")).toHaveText([
+    "Trial division",
+    "Pollard P−1",
+    "ECM (elliptic curves)",
+    "Quadratic sieve (SIQS)",
+    "Baillie–PSW",
+  ]);
+  await expect(table.getByRole("row", { name: /Quadratic sieve/ }).locator("math")).toHaveText("LN[1/2,1]");
+});
+
+test("reports an engine that failed to load and recovers on the next run", async ({ page, context }) => {
+  // The .wasm is fetched through the service worker, so block it for the whole context.
+  await context.route("**/*.wasm", (route) => route.abort());
   await page.reload();
   await factorize(page, "3233");
 
   await expect(page.getByRole("main").getByRole("alert")).toHaveText(/could not be loaded/);
 
-  await page.unroute("**/*.wasm");
+  await context.unroute("**/*.wasm");
   await page.getByRole("button", { name: "Factorize" }).click();
 
   await expect(page.getByTestId("factorization")).toHaveText("3233 = 53 × 61");
-});
-
-test("cancels a long factorization", async ({ page }) => {
-  await factorize(page, RSA_100);
-  await expect(page.getByRole("status")).toContainText("Factoring");
-  await page.getByRole("button", { name: "Cancel" }).click();
-
-  await expect(page.getByRole("button", { name: "Factorize" })).toBeVisible();
-  await expect(page.getByRole("main").getByRole("status")).toHaveCount(0);
 });

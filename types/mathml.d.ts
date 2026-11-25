@@ -17,6 +17,7 @@ declare module "react" {
       mi: MathMLProps;
       mn: MathMLProps;
       mo: MathMLProps;
+      msqrt: MathMLProps;
       msub: MathMLProps;
       msup: MathMLProps;
     }

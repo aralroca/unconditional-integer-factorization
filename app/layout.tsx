@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import type { ReactNode } from "react";
 
+import { BASE_PATH } from "@/lib/site";
+
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -16,6 +18,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${mono.variable}`}>
+      <head>
+        {/* GitHub Pages cannot send COOP/COEP headers; this service worker adds them so
+            multithreaded WebAssembly (SharedArrayBuffer) works. It reloads once on first visit. */}
+        <script src={`${BASE_PATH}/coi-serviceworker.js`} />
+      </head>
       <body>{children}</body>
     </html>
   );

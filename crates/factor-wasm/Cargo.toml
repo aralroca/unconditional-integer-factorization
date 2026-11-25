@@ -4,20 +4,25 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 publish = false
-description = "Integer factorization for the browser: yamaquasi + num-prime compiled to WebAssembly"
+description = "Multithreaded integer factorization for the browser: yamaquasi + num-prime compiled to WebAssembly"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-# Fork with one change: web-time instead of std::time::Instant, which panics on wasm32-unknown-unknown.
-yamaquasi = { git = "https://github.com/aralroca/yamaquasi", rev = "503491d3332ad96714d14a52e64987a69e8e2be7" }
+# Fork (branch `browser`): web-time instead of std::time::Instant (which panics on
+# wasm32-unknown-unknown), wasm32 threads on the ambient rayon pool, a progress callback,
+# and a fix for endless ECM retries when running with threads.
+yamaquasi = { git = "https://github.com/aralroca/yamaquasi", rev = "586d3e00989e4e52b911c801926e864695428330" }
 num-prime = "0.7"
 num-bigint = "0.4"
 wasm-bindgen = "=0.2.130"
+rayon = "1"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.2", features = ["js"] }
+# Rayon threads as Web Workers sharing the WebAssembly memory.
+wasm-bindgen-rayon = { version = "1.3", features = ["no-bundler"] }
 
 [profile.release]
 lto = true
