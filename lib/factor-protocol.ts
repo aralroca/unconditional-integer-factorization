@@ -10,6 +10,8 @@ export type FactorSuccess = {
   primes: string[];
   exponents: number[];
   unfactored: string[];
+  /** Exponent of each composite in `unfactored`. */
+  unfactoredExponents: number[];
   /** Methods the engine ran, in the order they started. */
   methods: string[];
   threads: number;

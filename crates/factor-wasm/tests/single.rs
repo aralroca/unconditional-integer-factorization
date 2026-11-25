@@ -50,6 +50,14 @@ fn pollard_p_minus_1_needs_exactly_one_smooth_p_minus_1() {
 }
 
 #[test]
+fn counts_a_repeated_composite_once_with_its_exponent() {
+    let square = (BigUint::from_str(M67).unwrap().pow(2)).to_string();
+    let result = factor_with(&square, Method::PollardPm1).unwrap();
+
+    assert_eq!((result.unfactored, result.unfactored_exponents), (vec![M67.to_string()], vec![2]));
+}
+
+#[test]
 fn ecm_and_the_quadratic_sieve_run_alone() {
     assert_eq!(primes_of(factor_with(M67, Method::Ecm)), ["193707721", "761838257287"]);
     assert_eq!(

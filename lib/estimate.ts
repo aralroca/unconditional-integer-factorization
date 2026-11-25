@@ -25,7 +25,7 @@ export function estimateCosts(n: bigint): Estimate[] {
     estimate("ecm", "ECM (elliptic curves)", lFunction(lnP, 1 / 2, Math.SQRT2), "Lp[1/2, √2]"),
     estimate("siqs", "Quadratic sieve (SIQS)", lFunction(lnN, 1 / 2, 1), "LN[1/2, 1]"),
     estimate("nfs", "Number Field Sieve", lFunction(lnN, 1 / 3, 1.923), "LN[1/3, 1.92]; not implemented here"),
-    estimate("google", "Google's algorithm", lFunction(lnN, 1 / 3, 105), "LN[1/3, 105]; here it is trial division"),
+    estimate("google", "Google's algorithm", lFunction(lnN, 1 / 3, 105), "LN[1/3, 105]; below 2^10000 it is trial division"),
   ];
 }
 

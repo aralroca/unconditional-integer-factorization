@@ -176,5 +176,17 @@ test("compares the estimated cost of every method, highlighting the chosen one",
   ]);
   await expect(estimates.getByRole("row", { name: /Quadratic sieve/ })).toContainText("≈ 1015");
   await expect(estimates.locator('tr[aria-current="true"]')).toContainText("≈ 10861");
-  await expect(estimates.locator('tr[aria-current="true"]')).toContainText("here it is trial division");
+  await expect(estimates.locator('tr[aria-current="true"]')).toContainText("below 2^10000 it is trial division");
+});
+
+test("shows a composite part P−1 cannot split once, with its exponent", async ({ page }) => {
+  const errors = collectConsoleErrors(page);
+  const square = (BigInt("147573952589676412927") ** 2n).toString();
+
+  await chooseMethod(page, "Pollard P−1");
+  await factorize(page, square);
+
+  await expect(page.getByTestId("factorization")).toHaveText(`${square} = 1475739525896764129272`);
+  await expect(page.getByTestId("factorization").locator(".unfactored sup")).toHaveText("2");
+  expect(errors).toEqual([]);
 });

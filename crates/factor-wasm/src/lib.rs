@@ -30,8 +30,10 @@ pub struct Factorization {
     pub primes: Vec<String>,
     /// Exponent of each prime in `primes`.
     pub exponents: Vec<u32>,
-    /// Composite cofactors that could not be split (empty when complete).
+    /// Composite cofactors that could not be split (empty when complete), ascending.
     pub unfactored: Vec<String>,
+    /// Exponent of each composite in `unfactored`.
+    pub unfactored_exponents: Vec<u32>,
 }
 
 static RESULT: Mutex<Option<Factorization>> = Mutex::new(None);
@@ -115,7 +117,8 @@ fn factor(n: BigUint, method: Method) -> Factorization {
         n: n.to_string(),
         primes: powers.keys().map(BigUint::to_string).collect(),
         exponents: powers.into_values().collect(),
-        unfactored: unfactored.iter().map(BigUint::to_string).collect(),
+        unfactored: unfactored.keys().map(BigUint::to_string).collect(),
+        unfactored_exponents: unfactored.into_values().collect(),
     }
 }
 
