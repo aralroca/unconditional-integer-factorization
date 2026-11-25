@@ -1,6 +1,8 @@
 // Messages between the page and public/factor.worker.js.
 
-export type FactorRequest = { input: string };
+import type { MethodId } from "./methods";
+
+export type FactorRequest = { input: string; method: MethodId };
 
 export type FactorSuccess = {
   ok: true;

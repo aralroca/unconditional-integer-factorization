@@ -1,0 +1,73 @@
+.estimates {
+  display: grid;
+  gap: 12px;
+  margin-top: 40px;
+}
+
+.estimates h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.estimates p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  padding: 8px 10px 8px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table th {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.count {
+  font-family: var(--font-mono), monospace;
+  white-space: nowrap;
+}
+
+.barCell {
+  width: 30%;
+}
+
+.bar {
+  display: block;
+  min-width: 2px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--dim);
+}
+
+.note {
+  color: var(--dim);
+  font-size: 13px;
+}
+
+.selected th,
+.selected .count {
+  color: var(--link);
+  font-weight: 600;
+}
+
+.selected .bar {
+  background: var(--link);
+}
+
+@media (max-width: 600px) {
+  .barCell {
+    display: none;
+  }
+}

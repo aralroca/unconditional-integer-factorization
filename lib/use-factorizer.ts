@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { FactorFailure, FactorResponse, WorkerMessage } from "./factor-protocol";
+import type { FactorFailure, FactorRequest, FactorResponse, WorkerMessage } from "./factor-protocol";
+import type { MethodId } from "./methods";
 import { BASE_PATH } from "./site";
 
 export type FactorState =
@@ -58,9 +59,11 @@ export function useFactorizer() {
     setState({ status: "done", response: message.response });
   }
 
-  function start(input: string) {
+  function start(input: string, method: MethodId) {
+    const request: FactorRequest = { input, method };
+
     workerRef.current ??= spawn();
-    workerRef.current.postMessage({ input });
+    workerRef.current.postMessage(request);
     setState({ status: "running", activity: [], ms: 0 });
   }
 

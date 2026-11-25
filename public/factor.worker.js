@@ -19,7 +19,7 @@ async function boot() {
 }
 
 self.addEventListener("message", function answer(event) {
-  ready.then(() => run(event.data.input)).catch(reportLoadFailure);
+  ready.then(() => run(event.data.input, event.data.method)).catch(reportLoadFailure);
 });
 
 function reportLoadFailure(error) {
@@ -28,11 +28,11 @@ function reportLoadFailure(error) {
   self.postMessage({ type: "done", response: { ok: false, error: message, restart: true } });
 }
 
-function run(input) {
+function run(input, method) {
   const started = performance.now();
 
   try {
-    start(input);
+    start(input, method);
   } catch (error) {
     self.postMessage({ type: "done", response: { ok: false, error: error.message ?? String(error) } });
     return;
