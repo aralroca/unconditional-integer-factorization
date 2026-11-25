@@ -20,8 +20,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: dtolnay/rust-toolchain@stable
+      # Must match crates/factor-wasm/rust-toolchain.toml (wasm-bindgen-rayon needs nightly).
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: nightly-2026-11-20
+          components: rust-src
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
         with:
@@ -31,7 +34,8 @@ jobs:
           tool: wasm-bindgen@0.2.130
 
       - name: Test the Rust engine
-        run: cargo test --release --manifest-path crates/factor-wasm/Cargo.toml
+        working-directory: crates/factor-wasm
+        run: cargo test --release
         env:
           # Optimised but without the slow whole-program link the WebAssembly build uses.
           CARGO_PROFILE_RELEASE_LTO: "false"
