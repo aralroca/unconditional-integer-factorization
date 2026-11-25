@@ -43,8 +43,8 @@ A **Method** dropdown picks what runs:
 | Auto (default) | the strategy below, the fastest option |
 | Trial division | divides by 2, 3, 5, 7, 9… up to √N; the progress line shows how far it is from √N |
 | Pollard rho | random walks x² + c on any size ([num-prime](https://github.com/uutils/num-prime)) |
-| Pollard P−1, ECM, quadratic sieve | that yamaquasi algorithm alone, up to 512 bits |
-| Google's L<sub>N</sub>[1/3, O(1)] algorithm | its first step: every number here is below 2<sup>10000</sup>, where the paper's algorithm is trial division |
+| Pollard P−1, ECM, quadratic sieve | that yamaquasi algorithm, after its quick checks for small primes and perfect powers, up to 512 bits |
+| Google's L<sub>N</sub>[1/3, O(1)] algorithm | its first step, trial division, which is what the paper's algorithm does below 2<sup>10000</sup>; its later steps are not implemented |
 
 Next to it, a table estimates every method's cost for the number being typed. It includes the
 Number Field Sieve, which is only estimated because it is not implemented here. The counts are
@@ -52,8 +52,9 @@ rough worst-case operation counts from each method's L-notation running time, wi
 lower-order terms, and the chosen method is highlighted. For RSA-100 the quadratic sieve needs about
 10<sup>15</sup> operations and the paper's bound about 10<sup>861</sup>.
 
-A method that is too slow for the number keeps reporting progress until you press **Cancel**: that
-is the comparison.
+Trial division and Pollard rho keep reporting progress until you press **Cancel** when they are too
+slow for the number: that is the comparison. P−1, ECM and the quadratic sieve stop when they give up
+and show the parts they could not split.
 
 ### Auto
 
