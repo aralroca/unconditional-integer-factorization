@@ -7,7 +7,9 @@ const RSA_100 =
 function collectConsoleErrors(page: Page) {
   const errors: string[] = [];
 
-  page.on("console", (message) => message.type() === "error" && errors.push(message.text()));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
   page.on("pageerror", (error) => errors.push(error.message));
 
   return errors;

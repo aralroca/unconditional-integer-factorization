@@ -34,10 +34,15 @@ best practical methods available in Rust and explains where the new result fits.
 
 ## How the factorizer works
 
-| Input size | What runs | Outcome |
-| --- | --- | --- |
-| up to 512 bits (~154 digits) | [yamaquasi](https://github.com/remyoudompheng/yamaquasi): trial division, Pollard rho, P−1, ECM and the self-initialising quadratic sieve | complete factorization (semiprimes above ~100 digits can take very long) |
-| above 512 bits | trial division by every prime below 2<sup>14</sup>, then the cofactor goes to yamaquasi if it fits in 512 bits, otherwise it gets a primality test | complete, or a composite part reported as "too large to split here" |
+1. Every input, of any size, is divided by all primes below 2<sup>14</sup>
+   ([num-prime](https://github.com/uutils/num-prime)).
+2. If what is left has at most 512 bits (~154 digits), it goes to
+   [yamaquasi](https://github.com/remyoudompheng/yamaquasi): Pollard rho, P−1, ECM and the
+   self-initialising quadratic sieve. This finishes the factorization, although semiprimes above
+   ~100 digits can take a very long time.
+3. A larger cofactor only gets a primality test; if it is composite it is reported as
+   "too large to split here". (General-purpose splitting at that size can run for hours, and
+   num-prime's splitter has no step limit.)
 
 Every reported prime passes a Baillie–PSW test (no counterexample is known).
 

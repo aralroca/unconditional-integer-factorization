@@ -1,4 +1,5 @@
-import { formatDuration, groupPowers, normalize, summarize } from "@/lib/format";
+import type { FactorSuccess } from "@/lib/factor-protocol";
+import { formatDuration, summarize } from "@/lib/format";
 import type { FactorState } from "@/lib/use-factorizer";
 
 export function FactorResult({ state }: { state: FactorState }) {
@@ -20,25 +21,22 @@ export function FactorResult({ state }: { state: FactorState }) {
     );
   }
 
-  return <Factorization input={normalize(state.input)} {...state.response} />;
+  return <Factorization result={state.response} />;
 }
 
-type FactorizationProps = { input: string; primes: string[]; unfactored: string[]; ms: number };
-
-function Factorization({ input, primes, unfactored, ms }: FactorizationProps) {
-  const powers = groupPowers(primes);
+function Factorization({ result }: { result: FactorSuccess }) {
   const terms = [
-    ...powers.map(({ prime, exponent }) => <Power key={prime} prime={prime} exponent={exponent} />),
-    ...unfactored.map((part) => <span key={part} className="unfactored">{part}</span>),
+    ...result.primes.map((prime, index) => <Power key={prime} prime={prime} exponent={result.exponents[index]} />),
+    ...result.unfactored.map((part) => <span key={part} className="unfactored">{part}</span>),
   ];
 
   return (
     <div className="result" role="status">
       <p className="result-value" data-testid="factorization">
-        {input} = {terms.flatMap((term, index) => (index === 0 ? [term] : [" × ", term]))}
+        {result.n} = {terms.flatMap((term, index) => (index === 0 ? [term] : [" × ", term]))}
       </p>
       <p className="result-note">
-        {summarize(powers, unfactored)} · {formatDuration(ms)}
+        {summarize(result)} · {formatDuration(result.ms)}
       </p>
     </div>
   );

@@ -6,5 +6,5 @@ set -eu
 cd "$(dirname "$0")/.."
 
 cargo build --manifest-path crates/factor-wasm/Cargo.toml --release --target wasm32-unknown-unknown
-wasm-bindgen --target web --out-dir wasm/pkg \
+wasm-bindgen --target web --remove-name-section --out-dir wasm/pkg \
   crates/factor-wasm/target/wasm32-unknown-unknown/release/factor_wasm.wasm

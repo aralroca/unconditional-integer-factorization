@@ -1,39 +1,26 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDuration, groupPowers, normalize, summarize } from "./format";
+import type { FactorSuccess } from "./factor-protocol";
+import { formatDuration, summarize } from "./format";
 
-describe("normalize", () => {
-  it("drops spaces, underscores and commas", () => {
-    expect(normalize(" 1_000, 000 \n")).toBe("1000000");
-  });
-});
-
-describe("groupPowers", () => {
-  it("groups repeated primes into powers in order", () => {
-    expect(groupPowers(["2", "2", "2", "5", "7", "7"])).toEqual([
-      { prime: "2", exponent: 3 },
-      { prime: "5", exponent: 1 },
-      { prime: "7", exponent: 2 },
-    ]);
-  });
-
-  it("returns nothing for no primes", () => {
-    expect(groupPowers([])).toEqual([]);
-  });
-});
+function success(primes: string[], exponents: number[], unfactored: string[] = []): FactorSuccess {
+  return { ok: true, n: "0", primes, exponents, unfactored, ms: 1 };
+}
 
 describe("summarize", () => {
   it("calls a single prime to the first power prime", () => {
-    expect(summarize([{ prime: "13", exponent: 1 }], [])).toBe("prime");
+    expect(summarize(success(["13"], [1]))).toBe("prime");
   });
 
   it("counts distinct prime factors", () => {
-    expect(summarize([{ prime: "2", exponent: 6 }], [])).toBe("1 distinct prime factor");
-    expect(summarize(groupPowers(["3", "5"]), [])).toBe("2 distinct prime factors");
+    expect(summarize(success(["2"], [6]))).toBe("1 distinct prime factor");
+    expect(summarize(success(["3", "5"], [1, 1]))).toBe("2 distinct prime factors");
   });
 
   it("mentions a composite part that could not be split", () => {
-    expect(summarize([], ["221"])).toBe("0 distinct prime factors, plus a composite part too large to split here");
+    expect(summarize(success([], [], ["221"]))).toBe(
+      "0 distinct prime factors, plus a composite part too large to split here",
+    );
   });
 });
 

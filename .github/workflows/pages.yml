@@ -31,6 +31,10 @@ jobs:
 
       - name: Test the Rust engine
         run: cargo test --release --manifest-path crates/factor-wasm/Cargo.toml
+        env:
+          # Optimised but without the slow whole-program link the WebAssembly build uses.
+          CARGO_PROFILE_RELEASE_LTO: "false"
+          CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
       - name: Build the WebAssembly module
         run: sh scripts/build-wasm.sh
 
@@ -43,7 +47,15 @@ jobs:
       - run: pnpm test
       - name: Build the static site (also type-checks)
         run: pnpm build
-      - run: pnpm exec playwright install --with-deps chromium
+      - uses: actions/cache@v6
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+      - if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
       - run: pnpm test:e2e
 
       - uses: actions/upload-pages-artifact@v5

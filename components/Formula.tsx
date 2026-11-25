@@ -13,20 +13,18 @@ export function LFormula({ constant }: { constant: "O(1)" | "105" }) {
       </mo>
       <mn>3</mn>
       <mo>,</mo>
-      {constant === "105" ? <mn>105</mn> : <BigO />}
+      {constant === "105" ? (
+        <mn>105</mn>
+      ) : (
+        <>
+          <mi mathvariant="normal">O</mi>
+          <mo stretchy="false">(</mo>
+          <mn>1</mn>
+          <mo stretchy="false">)</mo>
+        </>
+      )}
       <mo stretchy="false">]</mo>
     </math>
-  );
-}
-
-function BigO() {
-  return (
-    <>
-      <mi mathvariant="normal">O</mi>
-      <mo stretchy="false">(</mo>
-      <mn>1</mn>
-      <mo stretchy="false">)</mo>
-    </>
   );
 }
 

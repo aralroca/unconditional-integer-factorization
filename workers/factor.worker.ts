@@ -6,23 +6,20 @@ const ready = init();
 
 self.addEventListener("message", function answer(event: MessageEvent<FactorRequest>) {
   ready
-    .then(() => self.postMessage(run(event.data.input)))
-    .catch((error: unknown) => self.postMessage(failure(error)));
+    .then(() => run(event.data.input))
+    .catch(failure)
+    .then((response) => self.postMessage(response));
 });
 
 function run(input: string): FactorResponse {
   const started = performance.now();
+  const result = factorize(input);
+  const { n, primes, unfactored } = result;
+  const exponents = Array.from(result.exponents);
 
-  try {
-    const result = factorize(input);
-    const response = { ok: true as const, primes: result.primes, unfactored: result.unfactored };
+  result.free();
 
-    result.free();
-
-    return { ...response, ms: performance.now() - started };
-  } catch (error) {
-    return failure(error);
-  }
+  return { ok: true, n, primes, exponents, unfactored, ms: performance.now() - started };
 }
 
 function failure(error: unknown): FactorResponse {
