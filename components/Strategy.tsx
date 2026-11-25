@@ -36,10 +36,10 @@ const STEPS: Step[] = [
 export function Strategy() {
   return (
     <section className={styles.strategy} aria-labelledby="strategy-title">
-      <h2 id="strategy-title">Which algorithm runs when</h2>
+      <h2 id="strategy-title">What Auto runs, and when</h2>
       <p className="muted">
-        While a number is being factored the page shows what is running. The first method to find a factor
-        wins the race and stops the other.
+        With the method set to Auto the engine combines these steps; pick a single method above to run it on
+        its own and compare. While a number is being factored the page shows what is running.
       </p>
       <div className={styles.tableBox}>
         <table className={styles.table}>
@@ -69,9 +69,10 @@ export function Strategy() {
 function NotUsed() {
   return (
     <p className="muted">
-      Not used: the Number Field Sieve, <LFormula alpha="1/3" constant="1.92" />, is the fastest method above
-      about 100 digits but a far larger program; Google&apos;s <LFormula alpha="1/3" constant="105" /> is slower
-      at every practical size and is itself trial division below <PowerOfTwo exponent={10000} />.
+      Not in Auto: the Number Field Sieve, <LFormula alpha="1/3" constant="1.92" />, is the fastest method above
+      about 100 digits but a far larger program, so it is only estimated. Google&apos;s{" "}
+      <LFormula alpha="1/3" constant="105" /> is slower at every practical size; you can still pick it above, and
+      since every number here is below <PowerOfTwo exponent={10000} /> it runs its first step, trial division.
     </p>
   );
 }

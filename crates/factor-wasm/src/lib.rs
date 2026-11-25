@@ -1,11 +1,15 @@
 //! Multithreaded integer factorization for the browser.
 //!
-//! JavaScript calls [`start`], then polls [`activity`] and [`take_result`] while the
-//! work runs on a rayon thread pool (Web Workers through wasm-bindgen-rayon).
-//! [`factor_decimal`] runs the same strategy synchronously (tests, native builds).
+//! JavaScript calls [`start`] with a method (`auto` or a single algorithm), then polls
+//! [`activity`] and [`take_result`] while the work runs on a rayon thread pool (Web
+//! Workers through wasm-bindgen-rayon). [`factor_with`] runs the same thing
+//! synchronously (tests, native builds).
 
 mod engine;
 mod progress;
+mod single;
+
+pub use single::Method;
 
 use std::str::FromStr;
 use std::sync::{Mutex, Once};
@@ -36,25 +40,33 @@ static RESULT: Mutex<Option<Factorization>> = Mutex::new(None);
 /// thread dies; the hook records why so that the page does not wait forever.
 static FAILURE: Mutex<Option<String>> = Mutex::new(None);
 
-/// Factors a decimal integer greater than 1 (spaces, `_` and `,` are ignored).
+/// Factors a decimal integer greater than 1 with the automatic strategy (spaces, `_`
+/// and `,` are ignored).
 pub fn factor_decimal(input: &str) -> Result<Factorization, String> {
+    factor_with(input, Method::Auto)
+}
+
+/// Factors a decimal integer greater than 1 with `method`.
+pub fn factor_with(input: &str, method: Method) -> Result<Factorization, String> {
     let n = parse(input)?;
 
     progress::reset();
-    Ok(factor(n))
+    Ok(factor(n, method))
 }
 
-/// Starts factoring `input` in the background. Fails at once on invalid input.
+/// Starts factoring `input` with `method` (`auto`, `trial`, `rho`, `pm1`, `ecm`, `siqs`
+/// or `google`) in the background. Fails at once on invalid input.
 #[wasm_bindgen]
-pub fn start(input: &str) -> Result<(), JsError> {
+pub fn start(input: &str, method: &str) -> Result<(), JsError> {
     let n = parse(input).map_err(|message| JsError::new(&message))?;
+    let method = Method::from_str(method).map_err(|message| JsError::new(&message))?;
 
     record_panics();
     progress::reset();
     *RESULT.lock().unwrap() = None;
     *FAILURE.lock().unwrap() = None;
     rayon::spawn(move || {
-        let result = factor(n);
+        let result = factor(n, method);
         *RESULT.lock().unwrap() = Some(result);
     });
     Ok(())
@@ -96,8 +108,8 @@ pub fn take_result() -> Option<Factorization> {
     RESULT.lock().unwrap().take()
 }
 
-fn factor(n: BigUint) -> Factorization {
-    let (powers, unfactored) = engine::split(n.clone());
+fn factor(n: BigUint, method: Method) -> Factorization {
+    let (powers, unfactored) = engine::factor(n.clone(), method);
 
     Factorization {
         n: n.to_string(),

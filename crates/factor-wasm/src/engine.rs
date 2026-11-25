@@ -1,4 +1,4 @@
-//! The factoring strategy.
+//! The automatic factoring strategy ("Auto"), and dispatch to single methods.
 //!
 //! 1. Trial division by every prime below 2^14 (num-prime, any size).
 //! 2. A cofactor above 512 bits only gets a Baillie–PSW primality test.
@@ -18,9 +18,10 @@ use num_prime::PrimalityTestConfig;
 use yamaquasi::{Algo, Preferences, Uint, Verbosity};
 
 use crate::progress::{self, Lane};
+use crate::single::{self, Method};
 
 /// Largest input yamaquasi accepts (the limit of its own command line tool).
-const YAMAQUASI_MAX_BITS: u64 = 512;
+pub const YAMAQUASI_MAX_BITS: u64 = 512;
 
 /// Trial division bound. Cofactors above 512 bits are not split further: num-prime's
 /// general splitter (`factors`) searches for a divisor without any step limit, so a
@@ -45,13 +46,20 @@ const ECM_BATCH: usize = 8;
 
 pub type Powers = BTreeMap<BigUint, u32>;
 
-/// Splits `n` into prime powers plus the composite parts it could not split.
-pub fn split(n: BigUint) -> (Powers, Vec<BigUint>) {
+/// Factors `n` with `method`: prime powers plus the composite parts left unsplit.
+pub fn factor(n: BigUint, method: Method) -> (Powers, Vec<BigUint>) {
+    match method {
+        Method::Auto => split(n),
+        _ => tally(Powers::new(), single::run(n, method)),
+    }
+}
+
+/// Auto: splits `n` into prime powers plus the composite parts it could not split.
+fn split(n: BigUint) -> (Powers, Vec<BigUint>) {
     progress::report(Lane::Main, "Trial division", Some("primes below 16 384".into()));
     let (small, rest) = trial_division(primes(TRIAL_DIVISION_LIMIT).into_iter(), n, None);
     let cofactor = rest.unwrap_or_else(|unfinished| unfinished);
-    let mut powers: Powers = small.into_iter().map(|(p, e)| (BigUint::from(p), e as u32)).collect();
-    let mut unfactored = Vec::new();
+    let powers: Powers = small.into_iter().map(|(p, e)| (BigUint::from(p), e as u32)).collect();
 
     let large = if cofactor <= BigUint::from(1u8) {
         vec![]
@@ -60,12 +68,20 @@ pub fn split(n: BigUint) -> (Powers, Vec<BigUint>) {
     } else {
         vec![cofactor]
     };
+    tally(powers, large)
+}
+
+/// Adds the prime `parts` to `powers` (each checked with Baillie–PSW) and returns the
+/// composite ones separately.
+fn tally(mut powers: Powers, parts: Vec<BigUint>) -> (Powers, Vec<BigUint>) {
+    let mut unfactored = Vec::new();
+
     progress::report(Lane::Main, "Baillie–PSW primality test", None);
-    for factor in large {
-        if is_probable_prime(&factor) {
-            *powers.entry(factor).or_default() += 1;
+    for part in parts.into_iter().filter(|p| p > &BigUint::from(1u8)) {
+        if is_probable_prime(&part) {
+            *powers.entry(part).or_default() += 1;
         } else {
-            unfactored.push(factor);
+            unfactored.push(part);
         }
     }
     progress::finish(Lane::Main);
@@ -139,14 +155,14 @@ fn ecm_search(n: &BigUint, stop: Arc<AtomicBool>) -> Option<BigUint> {
     None
 }
 
-fn is_probable_prime(n: &BigUint) -> bool {
+pub fn is_probable_prime(n: &BigUint) -> bool {
     is_prime(n, Some(PrimalityTestConfig::bpsw())).probably()
 }
 
-fn to_uint(n: &BigUint) -> Uint {
+pub fn to_uint(n: &BigUint) -> Uint {
     Uint::from_str(&n.to_string()).expect("at most 512 bits fits in U1024")
 }
 
-fn to_biguint(n: &Uint) -> BigUint {
+pub fn to_biguint(n: &Uint) -> BigUint {
     BigUint::from_str(&n.to_string()).expect("decimal output")
 }

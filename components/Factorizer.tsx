@@ -2,13 +2,17 @@
 
 import { useState, type FormEvent } from "react";
 
+import type { MethodId } from "@/lib/methods";
 import { useFactorizer } from "@/lib/use-factorizer";
 
+import { Estimates } from "./Estimates";
 import { FactorResult } from "./FactorResult";
+import { MethodSelect } from "./MethodSelect";
 import { Samples } from "./Samples";
 
 export function Factorizer() {
   const [value, setValue] = useState("");
+  const [method, setMethod] = useState<MethodId>("auto");
   const { state, start, cancel } = useFactorizer();
   const running = state.status === "running";
 
@@ -16,12 +20,12 @@ export function Factorizer() {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (running) cancel();
-    else start(value);
+    else start(value, method);
   }
 
   function pick(sample: string) {
     setValue(sample);
-    start(sample);
+    start(sample, method);
   }
 
   return (
@@ -42,8 +46,10 @@ export function Factorizer() {
           {running ? "Cancel" : "Factorize"}
         </button>
       </form>
+      <MethodSelect value={method} disabled={running} onChange={setMethod} />
       <Samples disabled={running} onPick={pick} />
       <FactorResult state={state} />
+      <Estimates input={value} method={method} />
     </section>
   );
 }
