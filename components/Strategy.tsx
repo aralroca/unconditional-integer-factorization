@@ -72,7 +72,7 @@ function NotUsed() {
       Not in Auto: the Number Field Sieve, <LFormula alpha="1/3" constant="1.92" />, is the fastest method above
       about 100 digits but a far larger program, so it is only estimated. Google&apos;s{" "}
       <LFormula alpha="1/3" constant="105" /> is slower at every practical size; you can still pick it above, and
-      since every number here is below <PowerOfTwo exponent={10000} /> it runs its first step, trial division.
+      for any number below <PowerOfTwo exponent={10000} /> it runs its first step, trial division.
     </p>
   );
 }

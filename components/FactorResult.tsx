@@ -35,7 +35,11 @@ function Running({ activity, ms }: { activity: string[]; ms: number }) {
 function Factorization({ result }: { result: FactorSuccess }) {
   const terms = [
     ...result.primes.map((prime, index) => <Power key={prime} prime={prime} exponent={result.exponents[index]} />),
-    ...result.unfactored.map((part) => <span key={part} className="unfactored">{part}</span>),
+    ...result.unfactored.map((part, index) => (
+      <span key={part} className="unfactored">
+        <Power prime={part} exponent={result.unfactoredExponents[index]} />
+      </span>
+    )),
   ];
 
   return (

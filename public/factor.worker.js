@@ -72,6 +72,7 @@ function describe(result, ms) {
     primes: result.primes,
     exponents: Array.from(result.exponents),
     unfactored: result.unfactored,
+    unfactoredExponents: Array.from(result.unfactored_exponents),
     methods: methods(),
     threads,
     ms,
