@@ -1,3 +1,5 @@
+// Messages between the page and public/factor.worker.js.
+
 export type FactorRequest = { input: string };
 
 export type FactorSuccess = {
@@ -6,6 +8,9 @@ export type FactorSuccess = {
   primes: string[];
   exponents: number[];
   unfactored: string[];
+  /** Methods the engine ran, in the order they started. */
+  methods: string[];
+  threads: number;
   ms: number;
 };
 
@@ -13,3 +18,7 @@ export type FactorSuccess = {
 export type FactorFailure = { ok: false; error: string; restart?: boolean };
 
 export type FactorResponse = FactorSuccess | FactorFailure;
+
+export type WorkerMessage =
+  | { type: "progress"; activity: string[]; ms: number }
+  | { type: "done"; response: FactorResponse };

@@ -153,16 +153,22 @@ h1 .formula {
   color: var(--error);
 }
 
-.about {
-  display: grid;
-  gap: 16px;
-  margin-top: 72px;
+.activity {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font: 14px var(--font-mono), monospace;
 }
 
 .about h2 {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
+}
+
+.about {
+  display: grid;
+  gap: 16px;
+  margin-top: 72px;
 }
 
 .about p {

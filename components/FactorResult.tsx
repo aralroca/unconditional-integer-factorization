@@ -5,13 +5,7 @@ import type { FactorState } from "@/lib/use-factorizer";
 export function FactorResult({ state }: { state: FactorState }) {
   if (state.status === "idle") return null;
 
-  if (state.status === "running") {
-    return (
-      <p className="result-note" role="status">
-        Factoring… the page stays responsive; press Cancel to stop.
-      </p>
-    );
-  }
+  if (state.status === "running") return <Running activity={state.activity} ms={state.ms} />;
 
   if (!state.response.ok) {
     return (
@@ -22,6 +16,19 @@ export function FactorResult({ state }: { state: FactorState }) {
   }
 
   return <Factorization result={state.response} />;
+}
+
+function Running({ activity, ms }: { activity: string[]; ms: number }) {
+  return (
+    <div className="result" role="status">
+      <p className="result-note">Factoring for {formatDuration(ms)}. Press Cancel to stop.</p>
+      <ul className="activity" aria-label="Running now">
+        {activity.map((line) => (
+          <li key={line.split(":")[0]}>{line}</li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function Factorization({ result }: { result: FactorSuccess }) {
@@ -36,7 +43,10 @@ function Factorization({ result }: { result: FactorSuccess }) {
         {result.n} = {terms.flatMap((term, index) => (index === 0 ? [term] : [" × ", term]))}
       </p>
       <p className="result-note">
-        {summarize(result)} · {formatDuration(result.ms)}
+        {summarize(result)} · {formatDuration(result.ms)} on {result.threads} threads
+      </p>
+      <p className="result-note" data-testid="methods">
+        Methods used: {result.methods.join(" → ")}
       </p>
     </div>
   );

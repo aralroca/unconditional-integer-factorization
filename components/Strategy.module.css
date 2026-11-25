@@ -1,0 +1,43 @@
+.strategy {
+  display: grid;
+  gap: 16px;
+  margin-top: 72px;
+}
+
+.strategy h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.strategy p {
+  margin: 0;
+}
+
+.tableBox {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table thead th {
+  color: var(--dim);
+  font-weight: 500;
+}
+
+.table tbody th {
+  font-weight: 600;
+  white-space: nowrap;
+}

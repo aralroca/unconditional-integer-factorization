@@ -4,7 +4,7 @@ import type { FactorSuccess } from "./factor-protocol";
 import { formatDuration, summarize } from "./format";
 
 function success(primes: string[], exponents: number[], unfactored: string[] = []): FactorSuccess {
-  return { ok: true, n: "0", primes, exponents, unfactored, ms: 1 };
+  return { ok: true, n: "0", primes, exponents, unfactored, methods: [], threads: 1, ms: 1 };
 }
 
 describe("summarize", () => {

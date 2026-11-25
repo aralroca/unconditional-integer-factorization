@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { FactorFailure, FactorResponse } from "./factor-protocol";
+import type { FactorFailure, FactorResponse, WorkerMessage } from "./factor-protocol";
+import { BASE_PATH } from "./site";
 
 export type FactorState =
   | { status: "idle" }
-  | { status: "running" }
+  | { status: "running"; activity: string[]; ms: number }
   | { status: "done"; response: FactorResponse };
 
 const START_FAILURE: FactorFailure = { ok: false, error: "The factoring engine could not start in this browser." };
 
 /**
- * Keeps one warm Web Worker with the WebAssembly engine loaded. Cancelling terminates
- * it (the only way to stop synchronous WebAssembly) and starts a fresh one; a worker
- * that failed to load or crashed is dropped and recreated on the next run.
+ * Keeps one warm Web Worker with the WebAssembly engine and its thread pool loaded.
+ * Cancelling terminates it (the only way to stop running WebAssembly) and starts a
+ * fresh one; a worker whose engine failed to load is dropped and recreated on the next run.
  */
 export function useFactorizer() {
   const workerRef = useRef<Worker | null>(null);
@@ -25,9 +26,9 @@ export function useFactorizer() {
   }, []);
 
   function spawn() {
-    const worker = new Worker(new URL("../workers/factor.worker.ts", import.meta.url), { type: "module" });
+    const worker = new Worker(`${BASE_PATH}/factor.worker.js`, { type: "module" });
 
-    worker.onmessage = (event: MessageEvent<FactorResponse>) => receive(event.data);
+    worker.onmessage = (event: MessageEvent<WorkerMessage>) => receive(event.data);
     worker.onerror = () => {
       discard();
       setState((current) => (current.status === "running" ? { status: "done", response: START_FAILURE } : current));
@@ -41,15 +42,19 @@ export function useFactorizer() {
     workerRef.current = null;
   }
 
-  function receive(response: FactorResponse) {
-    if (!response.ok && response.restart) discard();
-    setState({ status: "done", response });
+  function receive(message: WorkerMessage) {
+    if (message.type === "progress") {
+      setState({ status: "running", activity: message.activity, ms: message.ms });
+      return;
+    }
+    if (!message.response.ok && message.response.restart) discard();
+    setState({ status: "done", response: message.response });
   }
 
   function start(input: string) {
     workerRef.current ??= spawn();
     workerRef.current.postMessage({ input });
-    setState({ status: "running" });
+    setState({ status: "running", activity: [], ms: 0 });
   }
 
   function cancel() {

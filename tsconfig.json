@@ -4,7 +4,6 @@
     "lib": [
       "dom",
       "dom.iterable",
-      "webworker",
       "esnext"
     ],
     "allowJs": true,
@@ -40,6 +39,6 @@
     "node_modules",
     "out",
     "crates",
-    "wasm/pkg"
+    "public"
   ]
 }
