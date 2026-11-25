@@ -34,64 +34,95 @@ best practical methods available in Rust and explains where the new result fits.
 
 ## How the factorizer works
 
-1. Every input, of any size, is divided by all primes below 2<sup>14</sup>
-   ([num-prime](https://github.com/uutils/num-prime)).
-2. If what is left has at most 512 bits (~154 digits), it goes to
-   [yamaquasi](https://github.com/remyoudompheng/yamaquasi): Pollard rho, P−1, ECM and the
-   self-initialising quadratic sieve. This finishes the factorization, although semiprimes above
-   ~100 digits can take a very long time.
-3. A larger cofactor only gets a primality test; if it is composite it is reported as a part
-   that "could not be split here". (General-purpose splitting at that size can run for hours, and
-   num-prime's splitter has no step limit.)
+| Step | Method | When it runs | Cost |
+| --- | --- | --- | --- |
+| 1 | Trial division ([num-prime](https://github.com/uutils/num-prime)) | always: every prime below 2<sup>14</sup>, any input size | ~1 900 divisions |
+| 2 | Pollard rho | on what is left, up to 512 bits | ~√p for a factor p |
+| 3 | Pollard P−1 | same range; finds p when p − 1 is smooth | depends on p − 1 |
+| 4 | ECM | a short pretest sized to N, then, from 200 bits, racing step 5 on one thread | L<sub>p</sub>[1/2, √2] |
+| 5 | Self-initialising quadratic sieve (SIQS) | what ECM did not split, up to 512 bits (~154 digits), on every thread | L<sub>N</sub>[1/2, 1] |
+| 6 | Baillie–PSW | every reported prime, and any cofactor above 512 bits | polynomial |
 
-Every reported prime passes a Baillie–PSW test (no counterexample is known).
+Steps 2–5 are [yamaquasi](https://github.com/remyoudompheng/yamaquasi)'s automatic strategy. For a
+cofactor of 200 bits or more, an extra ECM search with GMP-ECM's recommended bounds races it:
+whichever finds a factor first stops the other through yamaquasi's `should_abort`. A composite
+cofactor above 512 bits is reported as a part that "could not be split here": general-purpose
+splitting at that size can run for hours, and num-prime's splitter has no step limit.
 
-The engine lives in [`crates/factor-wasm`](crates/factor-wasm). It runs in a dedicated
-Web Worker, so the page stays responsive and **Cancel** simply terminates the worker. The worker is
-single-threaded on purpose: GitHub Pages cannot send the COOP/COEP headers that WebAssembly threads
-need.
+While it runs, the page shows what each lane is doing (for example
+"Quadratic sieve (SIQS): 63% of the relations"). Afterwards it lists the methods that ran.
 
-yamaquasi is used from [a fork](https://github.com/aralroca/yamaquasi/tree/wasm-web-time) with one
-change: it measures time with [`web-time`](https://crates.io/crates/web-time) instead of
-`std::time::Instant`, which panics on `wasm32-unknown-unknown`.
+Not used: the Number Field Sieve, L<sub>N</sub>[1/3, 1.92], is the fastest method above about 100
+digits but a far larger program. The paper's algorithm is slower at every practical size.
+
+### Threads in the browser
+
+- The engine ([`crates/factor-wasm`](crates/factor-wasm)) is built with shared memory, atomics and
+  SIMD. [wasm-bindgen-rayon](https://github.com/RReverser/wasm-bindgen-rayon) runs rayon's thread
+  pool as Web Workers, one per logical core.
+- [`public/factor.worker.js`](public/factor.worker.js) loads the engine, starts the job and polls
+  its progress every 200 ms. **Cancel** terminates it, and its thread pool with it.
+- Shared memory needs cross-origin isolation, and GitHub Pages cannot send COOP/COEP headers. The
+  vendored [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker) adds them, which
+  reloads the page once on the first visit.
+- yamaquasi comes from [a fork](https://github.com/aralroca/yamaquasi/tree/browser) with three
+  changes:
+  - it uses [`web-time`](https://crates.io/crates/web-time) instead of `std::time::Instant`, which
+    panics on `wasm32-unknown-unknown`;
+  - on wasm32, parallel loops run on the ambient rayon pool, and a progress callback reports what
+    it is doing;
+  - a fix for endless ECM retries when running with threads.
+
+Measured in Chrome on a 14-core laptop, against the previous single-threaded build:
+
+| Balanced semiprime | 1 thread, no SIMD | 14 threads, SIMD |
+| --- | --- | --- |
+| 63 digits | 3.2 s | 1.2 s |
+| 70 digits | 14.8 s | 3.8 s |
 
 ## Project structure
 
 ```
 app/                  Next.js App Router page, layout and styles
-components/           Factorizer form, result and MathML formulas
-lib/                  worker hook, result formatting, site constants
-workers/              Web Worker that loads the WebAssembly module
-crates/factor-wasm/   Rust engine and its tests
+components/           factorizer form, live progress and result, strategy table, MathML formulas
+lib/                  worker hook, message types, result formatting, site constants
+public/               the engine's Web Worker and the COOP/COEP service worker
+                      (public/engine/ is generated by scripts/build-wasm.sh)
+crates/factor-wasm/   Rust engine, its tests and its pinned nightly toolchain
 scripts/              WebAssembly build and local static server
 e2e/                  Playwright tests against the static export
 ```
 
 ## Development
 
-Requirements: Rust (stable) with the `wasm32-unknown-unknown` target,
-[`wasm-bindgen-cli`](https://crates.io/crates/wasm-bindgen-cli) 0.2.130 (it must match the
-`wasm-bindgen` crate version), Node.js 24+, pnpm and Python 3 (only for the local static server).
+Requirements:
+- **Rust via rustup.** It installs the nightly pinned in
+  [`crates/factor-wasm/rust-toolchain.toml`](crates/factor-wasm/rust-toolchain.toml), because
+  `-Z build-std` is needed for WebAssembly threads.
+- **[`wasm-bindgen-cli`](https://crates.io/crates/wasm-bindgen-cli) 0.2.130.** It must match the
+  `wasm-bindgen` crate version.
+- **Node.js 24+ and pnpm.**
+- **Python 3,** only for the local static server.
 
 ```sh
-rustup target add wasm32-unknown-unknown
 cargo install wasm-bindgen-cli --version 0.2.130
 
 pnpm install
-pnpm build:wasm      # compile the Rust engine to wasm/pkg
+pnpm build:wasm      # compile the Rust engine to public/engine
 pnpm dev             # http://localhost:3000/unconditional-integer-factorization/
 ```
 
 ## Tests
 
 ```sh
-cargo test --release --manifest-path crates/factor-wasm/Cargo.toml   # engine
-pnpm test                                                             # formatting helpers (Vitest)
-pnpm build && pnpm test:e2e                                           # site in Chrome (Playwright)
+(cd crates/factor-wasm && cargo test --release)   # engine, natively
+pnpm test                                          # formatting helpers (Vitest)
+pnpm build && pnpm test:e2e                        # site in Chrome (Playwright)
 ```
 
-The end-to-end tests serve `out/` under the same base path as GitHub Pages. Locally they use the
-installed Google Chrome; on CI they use Playwright's Chromium.
+The end-to-end tests serve `out/` under the same base path as GitHub Pages and wait for the
+service worker to make the page cross-origin isolated. Locally they use the installed Google
+Chrome; on CI they use Playwright's Chromium.
 
 ## Deployment
 
@@ -107,5 +138,9 @@ Actions).
   Google.
 - [yamaquasi](https://github.com/remyoudompheng/yamaquasi) by Rémy Oudompheng, BSD-3-Clause.
 - [num-prime](https://github.com/uutils/num-prime) and [num-bigint](https://github.com/rust-num/num-bigint).
+- [wasm-bindgen-rayon](https://github.com/RReverser/wasm-bindgen-rayon) and
+  [rayon](https://github.com/rayon-rs/rayon).
+- [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker) by Guido Zuidhof, MIT,
+  vendored as `public/coi-serviceworker.js`.
 
 This repository is released under the [MIT License](LICENSE).
