@@ -9,7 +9,7 @@ next-env.d.ts
 
 # Rust / WebAssembly build output
 crates/*/target/
-wasm/pkg/
+public/engine/
 
 # tests
 test-results/

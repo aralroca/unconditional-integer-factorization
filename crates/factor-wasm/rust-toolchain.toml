@@ -1,0 +1,6 @@
+# wasm-bindgen-rayon needs a nightly toolchain to rebuild std with atomics (-Z build-std).
+[toolchain]
+channel = "nightly-2026-11-20"
+components = ["rust-src"]
+targets = ["wasm32-unknown-unknown"]
+profile = "minimal"
