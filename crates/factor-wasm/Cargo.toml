@@ -1,0 +1,24 @@
+[package]
+name = "factor-wasm"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+publish = false
+description = "Integer factorization for the browser: yamaquasi + num-prime compiled to WebAssembly"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Fork with one change: web-time instead of std::time::Instant, which panics on wasm32-unknown-unknown.
+yamaquasi = { git = "https://github.com/aralroca/yamaquasi", rev = "503491d3332ad96714d14a52e64987a69e8e2be7" }
+num-prime = "0.7"
+num-bigint = "0.4"
+wasm-bindgen = "=0.2.130"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
